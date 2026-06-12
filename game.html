@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blocky Digital Circus Adventure</title>
+
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Verdana,sans-serif;
+}
+
+body{
+background:#050505;
+color:#fff;
+overflow:hidden;
+}
+
+#game{
+display:none;
+height:100vh;
+width:100vw;
+}
+
+#startScreen{
+position:absolute;
+inset:0;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+background:
+radial-gradient(circle at center,#222,#000);
+z-index:10;
+}
+
+#startBtn{
+padding:18px 40px;
+font-size:24px;
+background:#00ccff;
+border:none;
+cursor:pointer;
+font-weight:bold;
+}
+
+h1{
+margin-bottom:20px;
+text-align:center;
+}
+
+#left{
+width:70%;
+height:100%;
+position:relative;
+float:left;
+}
+
+#right{
+width:30%;
+height:100%;
+float:left;
+background:#111;
+border-left:4px solid #333;
+display:flex;
+flex-direction:column;
+}
+
+canvas{
+width:100%;
+height:100%;
+image-rendering:pixelated;
+background:#6eb8ff;
+}
+
+#ui{
+padding:15px;
+}
+
+.bar{
+height:22px;
+background:#333;
+margin-bottom:10px;
+}
+
+.fill{
+height:100%;
+background:#2aff4f;
+width:100%;
+}
+
+#score{
+margin-top:8px;
+margin-bottom:8px;
+}
+
+#inventory{
+min-height:70px;
+border:1px solid #444;
+padding:6px;
+margin-top:8px;
+}
+
+#textBox{
+flex:1;
+padding:12px;
+overflow-y:auto;
+border-top:3px solid #333;
+border-bottom:3px solid #333;
+}
+
+#story{
+line-height:1.5;
+white-space:pre-wrap;
+}
+
+#choices{
+padding:10px;
+display:flex;
+flex-direction:column;
+gap:8px;
+}
+
+.choice{
+padding:10px;
+background:#222;
+border:1px solid #555;
+cursor:pointer;
+}
+
+.choice:hover{
+background:#333;
+}
+
+.scanlines{
+pointer-events:none;
+position:absolute;
+inset:0;
+background:
+repeating-linear-gradient(
+to bottom,
+rgba(255,255,255,.03),
+rgba(255,255,255,.03) 2px,
+transparent 2px,
+transparent 4px
+);
+}
+
+.glitch{
+animation:glitch 3s infinite;
+}
+
+@keyframes glitch{
+0%{transform:translate(0)}
+95%{transform:translate(0)}
+96%{transform:translate(2px,-2px)}
+97%{transform:translate(-2px,2px)}
+98%{transform:translate(2px,1px)}
+100%{transform:translate(0)}
+}
+</style>
+</head>
+
+<body>
+
+<div id="startScreen">
+<h1>BLOCKY DIGITAL CIRCUS</h1>
+<p style="margin-bottom:20px">
+A Retro 2000s VR Adventure
+</p>
+<button id="startBtn">PRESS START</button>
+</div>
+
+<div id="game">
+
+<div id="left">
+
+<canvas id="view" width="900" height="600"></canvas>
+
+<div class="scanlines"></div>
+
+</div>
+
+<div id="right">
+
+<div id="ui">
+
+<div>HEALTH</div>
+<div class="bar">
+<div class="fill" id="healthFill"></div>
+</div>
+
+<div id="score">Score: 0</div>
+
+<div id="keys">Keys: 0 / 3</div>
+
+<div>
+Inventory
+</div>
+
+<div id="inventory"></div>
+
+</div>
+
+<div id="textBox">
+<div id="story"></div>
+</div>
+
+<div id="choices"></div>
+
+</div>
+
+</div>
+
+<script>
+
+const canvas=document.getElementById("view");
+const ctx=canvas.getContext("2d");
+
+let health=100;
+let score=0;
+let keys=0;
+
+let inventory=[];
+
+let scene="intro";
+
+let secretFile=false;
+let tunnelUsed=false;
+
+const story=document.getElementById("story");
+const choices=document.getElementById("choices");
+
+function updateUI(){
+
+document.getElementById("healthFill").style.width=
+health+"%";
+
+document.getElementById("score").innerText=
+"Score: "+score;
+
+document.getElementById("keys").innerText=
+"Keys: "+keys+" / 3";
+
+document.getElementById("inventory").innerHTML=
+inventory.join("<br>");
+
+}
+
+function addItem(item){
+
+if(!inventory.includes(item)){
+inventory.push(item);
+}
+
+updateUI();
+}
+
+function typeText(text){
+
+story.innerHTML="";
+
+let i=0;
+
+let timer=setInterval(()=>{
+
+story.innerHTML = text.slice(0, i + 1);
+
+i++;
+
+if(i>=text.length){
+clearInterval(timer);
+}
+
+},20);
+
+}
+
+function setChoices(arr){
+
+choices.innerHTML="";
+
+arr.forEach(choice=>{
+
+const btn=document.createElement("button");
+
+btn.className="choice";
+
+btn.innerText=choice.text;
+
+btn.onclick=choice.action;
+
+choices.appendChild(btn);
+
+});
+
+}
+
+const characters={
+
+pomni:{
+x:120,
+y:330,
+color:"#ff4040"
+},
+
+jax:{
+x:250,
+y:330,
+color:"#a566ff"
+},
+
+caine:{
+x:390,
+y:300,
+color:"#ffe74d"
+},
+
+ragatha:{
+x:520,
+y:330,
+color:"#ff88aa"
+},
+
+bubble:{
+x:670,
+y:250,
+color:"#ffffff"
+}
+
+};
+
+let frame=0;
+
+function drawCharacter(c){
+
+ctx.fillStyle=c.color;
+
+ctx.fillRect(c.x,c.y,40,40);
+
+ctx.fillStyle="#000";
+
+ctx.fillRect(c.x+10,c.y+10,5,5);
+
+ctx.fillRect(c.x+25,c.y+10,5,5);
+
+ctx.fillRect(
+c.x+15,
+c.y+25,
+10,
+4
+);
+
+}
+
+function drawScene(){
+
+frame++;
+
+ctx.clearRect(
+0,
+0,
+canvas.width,
+canvas.height
+);
+
+ctx.fillStyle="#79c16f";
+ctx.fillRect(
+0,
+450,
+900,
+150
+);
+
+for(let i=0;i<18;i++){
+
+ctx.fillStyle=
+i%2?
+"#6fa95f":
+"#78b66b";
+
+ctx.fillRect(
+i*50,
+430,
+50,
+20
+);
+
+}
+
+ctx.fillStyle="#8bd3ff";
+
+ctx.fillRect(
+0,
+0,
+900,
+430
+);
+
+for(let n in characters){
+
+let c=characters[n];
+
+c.y+=Math.sin(
+(frame/20)+(c.x)
+)*0.1;
+
+drawCharacter(c);
+
+}
+
+ctx.fillStyle="#888";
+
+ctx.fillRect(
+730,
+330,
+100,
+120
+);
+
+ctx.fillStyle="#444";
+
+ctx.fillRect(
+730,
+300,
+100,
+30
+);
+
+ctx.fillStyle="#fff";
+
+ctx.fillText(
+"EXIT",
+760,
+320
+);
+
+requestAnimationFrame(
+drawScene
+);
+
+}
+
+drawScene();
+updateUI();
+
+document
+.getElementById("startBtn")
+.onclick=()=>{
+
+document.getElementById(
+"startScreen"
+).style.display="none";
+
+document.getElementById(
+"game"
+).style.display="block";
+
+intro();
+
+};
+// ---------------- STORY SYSTEM ----------------
+
+function intro(){
+
+scene="intro";
+
+typeText(
+"You awaken inside the Blocky Digital Circus...\n"+
+"The world feels unstable, like a broken VR simulation.\n\n"+
+"Caine's voice echoes: 'Collect 3 KEYS to attempt escape... or be deleted.'"
+);
+
+setChoices([
+{
+text:"Explore the plaza",
+action:plaza
+},
+{
+text:"Check your system file",
+action:systemFile
+}
+]);
+
+}
+
+function plaza(){
+
+scene="plaza";
+
+typeText(
+"You step into the central plaza.\n"+
+"NPCs flicker like low-res textures.\n"+
+"Paths split into three trials:\n\n"+
+"1. Sky Platform Zone (Jax's Challenge)\n"+
+"2. Riddle Archive (Caine's Vault)\n"+
+"3. Block Climb Tower (Ragatha's Route)"
+);
+
+setChoices([
+{
+text:"Go to Platform Zone",
+action:platformZone
+},
+{
+text:"Go to Riddle Archive",
+action:riddleZone
+},
+{
+text:"Go to Block Tower",
+action:blockZone
+},
+{
+text:"Search for hidden tunnel",
+action:tunnelSearch
+}
+]);
+
+}
+
+// ---------------- SYSTEM FILE (SECRET HINT) ----------------
+
+function systemFile(){
+
+typeText(
+"[SYSTEM FILE CORRUPTED]\n"+
+"User: UNKNOWN\n"+
+"Escape flag: PARTIAL\n"+
+"Hidden route detected under maintenance grid...\n"+
+"WARNING: Requires logic override."
+);
+
+secretFile=true;
+score+=10;
+updateUI();
+
+setChoices([
+{
+text:"Return to plaza",
+action:plaza
+}
+]);
+
+}
+
+// ---------------- PLATFORM ZONE ----------------
+
+function platformZone(){
+
+typeText(
+"Jax appears: 'Bet you can't survive this.'\n"+
+"You enter floating block platforms over void data."
+);
+
+setChoices([
+{
+text:"Jump across platforms",
+action:()=>{
+let success=Math.random()>0.35;
+
+if(success){
+score+=20;
+keys++;
+addItem("Sky Key");
+typeText("You reach the end and obtain the SKY KEY!");
+}else{
+health-=20;
+typeText("You fall into glitch space. Damage taken.");
+}
+
+updateUI();
+tryEndGame();
+}
+},
+{
+text:"Back out",
+action:plaza
+}
+]);
+
+}
+
+// ---------------- RIDDLE ZONE ----------------
+
+function riddleZone(){
+
+typeText(
+"Caine's Archive locks you in a neon cube room.\n"+
+"Riddle appears on screen:\n\n"+
+"'I speak without a mouth and hear without ears. What am I?'"
+);
+
+setChoices([
+{
+text:"Echo",
+action:()=>{
+score+=25;
+keys++;
+addItem("Logic Key");
+typeText("Correct. The vault opens and you take the LOGIC KEY.");
+updateUI();
+tryEndGame();
+}
+},
+{
+text:"Wind",
+action:()=>{
+health-=50;
+typeText("Incorrect. Reality glitches and hurts you.");
+updateUI();
+tryEndGame();
+}
+},
+{
+text:"Back out",
+action:plaza
+}
+]);
+
+}
+
+// ---------------- BLOCK TOWER ----------------
+
+function blockZone(){
+
+typeText(
+"Ragatha guides you upward through shifting blocks.\n"+
+"The tower rearranges itself constantly."
+);
+
+setChoices([
+{
+text:"Climb carefully",
+action:()=>{
+let success=Math.random()>0.4;
+
+if(success){
+keys++;
+score+=20;
+addItem("Climb Key");
+typeText("You reach the top and grab the CLIMB KEY!");
+}else{
+health-=50;
+typeText("Blocks shift! You slip and take damage.");
+}
+
+updateUI();
+tryEndGame();
+}
+},
+{
+text:"Jump randomly",
+action:()=>{
+health-=50;
+typeText("Bad idea. You barely survive.");
+updateUI();
+tryEndGame();
+}
+},
+{
+text:"Return",
+action:plaza
+}
+]);
+
+}
+
+// ---------------- TUNNEL SYSTEM (SECRET ROUTE) ----------------
+
+function tunnelSearch(){
+
+typeText(
+"You notice a flickering wall behind the plaza.\n"+
+"It looks like a hidden maintenance entrance..."
+);
+
+if(secretFile){
+
+setChoices([
+{
+text:"Enter maintenance tunnel",
+action:tunnel
+},
+{
+text:"Go back",
+action:plaza
+}
+]);
+
+}else{
+
+setChoices([
+{
+text:"Go back",
+action:plaza
+}
+]);
+
+}
+
+}
+
+function tunnel(){
+
+if(tunnelUsed){
+
+typeText("You already explored this path.");
+return;
+}
+
+tunnelUsed=true;
+
+typeText(
+"You crawl through the glitch tunnel...\n"+
+"A logic gate blocks the path."
+);
+
+setChoices([
+{
+text:"Solve: 2 + 2 * 2 = ?",
+action:()=>{
+typeText("Correct. Gate opens.");
+score+=30;
+addItem("VOID KEY");
+keys++;
+updateUI();
+tryEndGame();
+}
+},
+{
+text:"Answer 8",
+action:()=>{
+health-=50;
+typeText("Wrong. System backlash!");
+updateUI();
+tryEndGame();
+
+}
+}
+]);
+
+}
+// ---------------- ENDINGS SYSTEM ----------------
+
+function checkEndings(){
+
+if(keys>=3 && secretFile && inventory.includes("VOID KEY")){
+
+trueEnding();
+return;
+}
+
+if(keys>=3){
+
+escapeEnding();
+return;
+}
+
+if(health<=0){
+
+deathEnding();
+return;
+}
+
+tryEndGame();
+}
+
+// ---------------- ESCAPE ENDING ----------------
+
+function escapeEnding(){
+
+typeText(
+"You gather all 3 KEYS.\n"+
+"The exit door stabilizes...\n\n"+
+"Caine: 'Impressive. But reality is not stable outside.'"
+);
+
+setChoices([
+{
+text:"Enter exit",
+action:()=>{
+score+=50;
+typeText(
+"You step through the EXIT...\n"+
+"The world desyncs... but you survive."
+);
+setTimeout(()=>{
+alert("ENDING: ESCAPE (NORMAL END)");
+},1500);
+}
+}
+]);
+
+}
+
+// ---------------- TRUE ENDING ----------------
+
+function trueEnding(){
+
+typeText(
+"You combine the SKY, LOGIC, CLIMB, and VOID data fragments.\n"+
+"A hidden file unlocks: /REALITY_ADMIN/\n\n"+
+"The circus dissolves..."
+);
+
+setChoices([
+{
+text:"Override simulation",
+action:()=>{
+score+=100;
+typeText(
+"REALITY BREACH SUCCESSFUL.\n"+
+"You wake up outside the system...\n"+
+"This was never just a game."
+);
+setTimeout(()=>{
+alert("ENDING: TRUE ESCAPE (SECRET END)");
+},1500);
+}
+}
+]);
+
+}
+function tryEndGame(){
+
+    const hasSky = inventory.includes("Sky Key");
+    const hasLogic = inventory.includes("Logic Key");
+    const hasClimb = inventory.includes("Climb Key");
+    const hasVoid = inventory.includes("VOID KEY");
+
+    // TRUE END (all keys + secret file)
+    if(hasSky && hasLogic && hasClimb && hasVoid && secretFile){
+        trueEnding();
+        return;
+    }
+
+    // NORMAL ESCAPE (all main keys)
+    if(hasSky && hasLogic && hasClimb){
+        escapeEnding();
+        return;
+    }
+
+    // DEATH
+    if(health <= 0){
+        deathEnding();
+        return;
+    }
+
+    // OTHERWISE CONTINUE
+    plaza();
+}
+
+// ---------------- DEATH ENDING ----------------
+
+function deathEnding(){
+
+typeText(
+"Your health reaches zero...\n"+
+"The system deletes your avatar."
+);
+
+setChoices([
+{
+text:"Restart",
+action:()=>{
+location.reload();
+}
+}
+]);
+
+}
+
+// ---------------- SIMPLE UPDATE LOOP FIX ----------------
+
+setInterval(()=>{
+updateUI();
+},500);
+
+// ---------------- START GAME FLOW ----------------
+
+// override intro trigger safety
+window.intro=intro;
+</script>
+
+</body>
+</html>

@@ -1,0 +1,119 @@
+/* Page Background */
+body {
+    background-color: #fff9c4; /* pastel yellow */
+    font-family: Arial, sans-serif;
+    color: #444;
+    margin: 20px;
+}
+
+/* Main Headings */
+h1 {
+    color: #ff80ab; /* pastel pink */
+    text-align: center;
+    background-color: #e1bee7; /* pastel purple */
+    padding: 15px;
+    border-radius: 15px;
+}
+
+h2 {
+    color: #64b5f6; /* pastel blue */
+}
+
+h3 {
+    color: #81c784; /* pastel green */
+}
+
+h4 {
+    color: #f48fb1; /* light pink */
+}
+
+/* Sections */
+.main {
+    background-color: rgba(255,255,255,0.7);
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 15px;
+    border-color: #81c784;
+  border-width: 6px;
+  border-style: solid;
+
+}
+
+.body {
+    display: flex;
+align-items: center;
+justify-content: space-between;
+}
+
+/* Character List */
+.list {
+    background-color: #bbdefb; /* light blue */
+    padding: 20px;
+    border-radius: 15px;
+    width: 50%;
+
+}
+
+ol {
+    background-color: #f8bbd0; /* light pink */
+    padding: 15px 35px;
+    border-radius: 10px;
+    margin-top: 10px;
+}
+
+/* Character Names */
+ul > li {
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: #6a1b9a;
+}
+
+/* Paragraphs */
+p {
+    line-height: 1.6;
+}
+
+/* Images */
+.imgage {
+    display: block;
+    margin: auto;
+    border: 6px solid #90caf9;
+    border-radius: 20px;
+    width: 45%;
+    height: auto;
+    max-width: none;
+    object-fit: contain;
+}
+
+/* Videos */
+iframe {
+    border: 5px solid #ce93d8;
+    border-radius: 15px;
+    margin-bottom: 65px;
+    margin-left: 65px;
+    margin-right: 65px;
+}
+.tableauPlaceholder {
+    width: 500px;
+    height: 400px;
+    margin: auto;
+}
+
+/* Links */
+a {
+    color: #ff80ab;
+}
+
+a:hover {
+    color: #64b5f6;
+}
+
+
+.right{
+float: right;
+}
+
+.left{
+float: left;
+}
+
